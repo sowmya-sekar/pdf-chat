@@ -2,7 +2,7 @@ import fitz
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pinecone import Pinecone
 from google import genai
-import os, sys
+import os, sys, time
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -42,6 +42,7 @@ def ingest_pdf(pdf_path):
         }])
         if i % 10 == 0:
             print(f"  {i+1}/{len(chunks)} done...")
+        time.sleep(0.7)  # Rate limit fix
 
     print("Done!")
 
