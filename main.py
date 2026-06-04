@@ -23,13 +23,16 @@ class QueryRequest(BaseModel):
     top_k: int = 5
 
 @app.post("/upload")
+@app.post("/upload")
 async def upload_pdf(file: UploadFile = File(...)):
+    # பழைய data delete பண்ணு
+    index.delete(delete_all=True)
+    
     with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
         tmp.write(await file.read())
         tmp_path = tmp.name
     ingest_pdf(tmp_path)
     return {"message": f"{file.filename} ingested!"}
-
 @app.post("/query")
 async def query(req: QueryRequest):
     q_emb = gemini_client.models.embed_content(
