@@ -19,29 +19,35 @@ with st.sidebar:
     uploaded_file = st.file_uploader("Choose a PDF", type="pdf")
     if uploaded_file:
         if st.button("Upload & Process"):
-            with st.spinner("Uploading... Processing runs in background (wait 2-3 mins before asking questions)"):
-             res = requests.post(
-            f"{API_URL}/upload",
-            files={"file": (uploaded_file.name, uploaded_file, "application/pdf")},
-            timeout=30
-        )
-        if res.status_code == 200:
-            st.success("✅ PDF uploading! Wait 2-3 mins then ask questions.")
-            st.session_state.pdf_uploaded = True
-            st.session_state.messages = []
-            st.session_state.summary = ""
-        else:
-            st.error(f"Failed: {res.status_code} — {res.text}")
+            with st.spinner("Uploading... Wait 2-3 mins then ask questions"):
+                try:
+                    res = requests.post(
+                        f"{API_URL}/upload",
+                        files={"file": (uploaded_file.name, uploaded_file, "application/pdf")},
+                        timeout=30
+                    )
+                    if res.status_code == 200:
+                        st.success("✅ PDF uploading! Wait 2-3 mins then ask questions.")
+                        st.session_state.pdf_uploaded = True
+                        st.session_state.messages = []
+                        st.session_state.summary = ""
+                    else:
+                        st.error(f"Failed: {res.status_code} — {res.text}")
+                except Exception as e:
+                    st.error(f"Error: {str(e)}")
 
     if st.session_state.pdf_uploaded:
         st.divider()
         if st.button("📝 Get Notes & Key Points"):
             with st.spinner("Generating notes..."):
-                res = requests.post(f"{API_URL}/summarize", timeout=60)
-                if res.status_code == 200:
-                    st.session_state.summary = res.json()["summary"]
-                else:
-                    st.error(f"Error: {res.text}")
+                try:
+                    res = requests.post(f"{API_URL}/summarize", timeout=60)
+                    if res.status_code == 200:
+                        st.session_state.summary = res.json()["summary"]
+                    else:
+                        st.error(f"Error: {res.text}")
+                except Exception as e:
+                    st.error(f"Error: {str(e)}")
 
 if st.session_state.summary:
     with st.expander("📝 Notes & Key Points", expanded=True):
@@ -61,14 +67,17 @@ if prompt := st.chat_input("Ask a question about your PDF..."):
 
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
-                res = requests.post(
-                    f"{API_URL}/query",
-                    json={"question": prompt},
-                    timeout=60
-                )
-                if res.status_code == 200:
-                    answer = res.json()["answer"]
-                    st.write(answer)
-                    st.session_state.messages.append({"role": "assistant", "content": answer})
-                else:
-                    st.error(f"Error: {res.text}")
+                try:
+                    res = requests.post(
+                        f"{API_URL}/query",
+                        json={"question": prompt},
+                        timeout=60
+                    )
+                    if res.status_code == 200:
+                        answer = res.json()["answer"]
+                        st.write(answer)
+                        st.session_state.messages.append({"role": "assistant", "content": answer})
+                    else:
+                        st.error(f"Error: {res.text}")
+                except Exception as e:
+                    st.error(f"Error: {str(e)}")
