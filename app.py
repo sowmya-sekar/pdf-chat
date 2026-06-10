@@ -19,19 +19,19 @@ with st.sidebar:
     uploaded_file = st.file_uploader("Choose a PDF", type="pdf")
     if uploaded_file:
         if st.button("Upload & Process"):
-            with st.spinner("Uploading & processing... (5-10 mins)"):
-                res = requests.post(
-                    f"{API_URL}/upload",
-                    files={"file": (uploaded_file.name, uploaded_file, "application/pdf")},
-                    timeout=600
-                )
-                if res.status_code == 200:
-                    st.success("✅ PDF uploaded!")
-                    st.session_state.pdf_uploaded = True
-                    st.session_state.messages = []
-                    st.session_state.summary = ""
-                else:
-                    st.error(f"Failed: {res.status_code} — {res.text}")
+            with st.spinner("Uploading... Processing runs in background (wait 2-3 mins before asking questions)"):
+             res = requests.post(
+            f"{API_URL}/upload",
+            files={"file": (uploaded_file.name, uploaded_file, "application/pdf")},
+            timeout=30
+        )
+        if res.status_code == 200:
+            st.success("✅ PDF uploading! Wait 2-3 mins then ask questions.")
+            st.session_state.pdf_uploaded = True
+            st.session_state.messages = []
+            st.session_state.summary = ""
+        else:
+            st.error(f"Failed: {res.status_code} — {res.text}")
 
     if st.session_state.pdf_uploaded:
         st.divider()

@@ -22,17 +22,25 @@ class QueryRequest(BaseModel):
     question: str
     top_k: int = 5
 
+from fastapi import FastAPI, UploadFile, File, BackgroundTasks
+import shutil
+
 @app.post("/upload")
-async def upload_pdf(file: UploadFile = File(...)):
+async def upload_pdf(file: UploadFile = File(...), background_tasks: BackgroundTasks = None):
     try:
         index.delete(delete_all=True)
     except Exception:
         pass
-    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
-        tmp.write(await file.read())
-        tmp_path = tmp.name
-    ingest_pdf(tmp_path)
-    return {"message": f"{file.filename} ingested!"}
+    
+    # temp file save பண்ணு
+    tmp_path = f"/tmp/{file.filename}"
+    with open(tmp_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    
+    # Background-ல run பண்ணு — timeout இல்லாம
+    background_tasks.add_task(ingest_pdf, tmp_path)
+    
+    return {"message": f"{file.filename} upload started! Processing in background..."}
 
 @app.post("/query")
 async def query(req: QueryRequest):
