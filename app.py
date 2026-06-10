@@ -1,7 +1,7 @@
 import streamlit as st
 import requests
 
-API_URL = "http://localhost:8000"
+API_URL = "https://pdf-chat-production-a069.up.railway.app"
 
 st.set_page_config(page_title="PDF Chat", page_icon="📄")
 st.title("📄 PDF Chat")
