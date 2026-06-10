@@ -7,6 +7,8 @@ from groq import Groq
 import os, tempfile
 from dotenv import load_dotenv
 from ingest import ingest_pdf
+from fastapi import FastAPI, UploadFile, File, BackgroundTasks
+import shutil
 
 load_dotenv()
 gemini_client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
@@ -22,26 +24,22 @@ class QueryRequest(BaseModel):
     question: str
     top_k: int = 5
 
-from fastapi import FastAPI, UploadFile, File, BackgroundTasks
-import shutil
+
 
 @app.post("/upload")
 async def upload_pdf(file: UploadFile = File(...), background_tasks: BackgroundTasks = None):
     try:
-        index.delete(delete_all=True)
+        # namespace="" explicitly கொடு
+        index.delete(delete_all=True, namespace="")
     except Exception:
         pass
     
-    # temp file save பண்ணு
     tmp_path = f"/tmp/{file.filename}"
     with open(tmp_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
     
-    # Background-ல run பண்ணு — timeout இல்லாம
     background_tasks.add_task(ingest_pdf, tmp_path)
-    
-    return {"message": f"{file.filename} upload started! Processing in background..."}
-
+    return {"message": f"{file.filename} upload started!"}
 @app.post("/query")
 async def query(req: QueryRequest):
     q_emb = gemini_client.models.embed_content(
