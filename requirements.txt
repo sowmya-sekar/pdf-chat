@@ -7,3 +7,6 @@ pinecone
 google-genai
 groq
 python-multipart
+pytesseract
+pillow
+pdf2image
