@@ -23,16 +23,17 @@ class QueryRequest(BaseModel):
     top_k: int = 5
 
 @app.post("/upload")
-@app.post("/upload")
 async def upload_pdf(file: UploadFile = File(...)):
-    # பழைய data delete பண்ணு
-    index.delete(delete_all=True)
-    
+    try:
+        index.delete(delete_all=True)
+    except Exception:
+        pass
     with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
         tmp.write(await file.read())
         tmp_path = tmp.name
     ingest_pdf(tmp_path)
     return {"message": f"{file.filename} ingested!"}
+
 @app.post("/query")
 async def query(req: QueryRequest):
     q_emb = gemini_client.models.embed_content(
@@ -64,6 +65,30 @@ Question: {req.question}"""
         "answer": response.choices[0].message.content,
         "sources": chunks[:3]
     }
+
+@app.post("/summarize")
+async def summarize():
+    results = index.query(
+        vector=[0.0] * 3072,
+        top_k=10,
+        include_metadata=True
+    )
+    chunks = [m.metadata["text"] for m in results.matches]
+    context = "\n\n".join(chunks)
+
+    prompt = f"""Based on the document below, provide:
+1. **Summary** - 5 sentence overview
+2. **Key Points** - 7 most important bullet points
+3. **Important Terms** - 5 key terms with definitions
+
+Document:
+{context}"""
+
+    response = groq_client.chat.completions.create(
+        model="llama-3.1-8b-instant",
+        messages=[{"role": "user", "content": prompt}]
+    )
+    return {"summary": response.choices[0].message.content}
 
 @app.get("/")
 def root():
