@@ -30,12 +30,22 @@ def chunk_text(text):
     )
     return splitter.split_text(text)
 
-def embed(text):
-    res = client.models.embed_content(
-        model="gemini-embedding-001",
-        contents=text
-    )
-    return res.embeddings[0].values
+def embed(text, retries=3):
+    for attempt in range(retries):
+        try:
+            res = client.models.embed_content(
+                model="gemini-embedding-001",
+                contents=text
+            )
+            return res.embeddings[0].values
+        except Exception as e:
+            if "429" in str(e):
+                wait_time = 30 * (attempt + 1)
+                print(f"Rate limit hit — waiting {wait_time}s...")
+                time.sleep(wait_time)
+            else:
+                raise e
+    return None
 
 def ingest_pdf(pdf_path):
     print(f"Reading {pdf_path}...")
@@ -47,25 +57,30 @@ def ingest_pdf(pdf_path):
     for i, chunk in enumerate(chunks):
         try:
             embedding = embed(chunk)
+            if embedding is None:
+                print(f"Skipping chunk {i} — embed failed")
+                continue
+
             vectors.append({
                 "id": f"chunk-{i}",
                 "values": embedding,
                 "metadata": {"text": chunk, "source": pdf_path}
             })
+
             if i % 10 == 0:
                 print(f"  {i+1}/{len(chunks)} done...")
-            time.sleep(0.3)  # 0.7 → 0.3 குறைச்சோம்
 
-            # batch 50-ஆ upsert பண்ணு
+            time.sleep(0.7)
+
             if len(vectors) >= 50:
                 index.upsert(vectors=vectors)
                 vectors = []
+
         except Exception as e:
             print(f"Error at chunk {i}: {e}")
             time.sleep(2)
             continue
 
-    # remaining vectors
     if vectors:
         index.upsert(vectors=vectors)
 
