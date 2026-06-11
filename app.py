@@ -36,12 +36,32 @@ with st.sidebar:
                 except Exception as e:
                     st.error(f"Error: {str(e)}")
 
-   if st.session_state.pdf_uploaded:
+    if st.session_state.pdf_uploaded:
+        st.divider()
+        if st.button("📝 Get Notes & Key Points"):
+            with st.spinner("Generating notes..."):
+                try:
+                    res = requests.post(f"{API_URL}/summarize", timeout=60)
+                    if res.status_code == 200:
+                        st.session_state.summary = res.json()["summary"]
+                    else:
+                        st.error(f"Error: {res.text}")
+                except Exception as e:
+                    st.error(f"Error: {str(e)}")
+
+if st.session_state.summary:
+    with st.expander("📝 Notes & Key Points", expanded=True):
+        st.markdown(st.session_state.summary)
+
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.write(msg["content"])
+
+if st.session_state.pdf_uploaded:
     if prompt := st.chat_input("Ask a question about your PDF..."):
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.write(prompt)
-
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
                 try:
@@ -59,35 +79,4 @@ with st.sidebar:
                 except Exception as e:
                     st.error(f"Error: {str(e)}")
 else:
-    st.chat_input("Upload a PDF first...", disabled=True)if st.session_state.summary:
-    with st.expander("📝 Notes & Key Points", expanded=True):
-        st.markdown(st.session_state.summary)
-
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.write(msg["content"])
-
-if prompt := st.chat_input("Ask a question about your PDF..."):
-    if not st.session_state.pdf_uploaded:
-        st.warning("Please upload a PDF first!")
-    else:
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.write(prompt)
-
-        with st.chat_message("assistant"):
-            with st.spinner("Thinking..."):
-                try:
-                    res = requests.post(
-                        f"{API_URL}/query",
-                        json={"question": prompt},
-                        timeout=60
-                    )
-                    if res.status_code == 200:
-                        answer = res.json()["answer"]
-                        st.write(answer)
-                        st.session_state.messages.append({"role": "assistant", "content": answer})
-                    else:
-                        st.error(f"Error: {res.text}")
-                except Exception as e:
-                    st.error(f"Error: {str(e)}")
+    st.chat_input("Upload a PDF first...", disabled=True)
