@@ -89,10 +89,30 @@ Question: {req.question}"""
 
 @app.post("/summarize")
 async def summarize():
-    results = index.query(
-        vector=[0.0] * 3072,
-        top_k=10,
-        include_metadata=True
-    )
-    chunks = [m.metadata["text"] for m in results.matches]
-    context
+    try:
+        results = index.query(
+            vector=[0.0] * 3072,
+            top_k=10,
+            include_metadata=True
+        )
+        chunks = [m.metadata["text"] for m in results.matches]
+        if not chunks:
+            return {"summary": "No document found. Please upload a PDF first."}
+        
+        context = "\n\n".join(chunks)
+
+        prompt = f"""Based on the document below, provide:
+1. **Summary** - 5 sentence overview
+2. **Key Points** - 7 most important bullet points
+3. **Important Terms** - 5 key terms with definitions
+
+Document:
+{context}"""
+
+        response = groq_client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return {"summary": response.choices[0].message.content}
+    except Exception as e:
+        return {"summary": f"Error: {str(e)}"}
