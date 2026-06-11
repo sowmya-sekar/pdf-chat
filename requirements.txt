@@ -1,12 +1,2 @@
-fastapi
-uvicorn
-python-dotenv
-pymupdf
-langchain-text-splitters
-pinecone
-google-genai
-groq
-python-multipart
-pytesseract
-pillow
-pdf2image
+streamlit
+requests
