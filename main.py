@@ -4,11 +4,9 @@ from pydantic import BaseModel
 from pinecone import Pinecone
 from google import genai
 from groq import Groq
-import os, tempfile
+import os, tempfile, asyncio, shutil
 from dotenv import load_dotenv
 from ingest import ingest_pdf
-from fastapi import FastAPI, UploadFile, File, BackgroundTasks
-import shutil
 
 load_dotenv()
 gemini_client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
@@ -20,26 +18,25 @@ app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"],
                    allow_methods=["*"], allow_headers=["*"])
 
+upload_lock = asyncio.Lock()
+
 class QueryRequest(BaseModel):
     question: str
     top_k: int = 5
 
-
-
 @app.post("/upload")
 async def upload_pdf(file: UploadFile = File(...)):
-    try:
-        index.delete(delete_all=True, namespace="")
-    except Exception:
-        pass
-    
-    import tempfile
-    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
-        tmp.write(await file.read())
-        tmp_path = tmp.name
-    
-    ingest_pdf(tmp_path)
-    return {"message": f"{file.filename} ingested!"}
+    async with upload_lock:
+        try:
+            index.delete(delete_all=True, namespace="")
+        except Exception:
+            pass
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+            tmp.write(await file.read())
+            tmp_path = tmp.name
+        ingest_pdf(tmp_path)
+        return {"message": f"{file.filename} ingested!"}
+
 @app.post("/query")
 async def query(req: QueryRequest):
     q_emb = gemini_client.models.embed_content(
