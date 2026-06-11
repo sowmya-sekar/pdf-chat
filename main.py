@@ -35,11 +35,22 @@ def run_ingest(tmp_path, filename):
 
 @app.post("/upload")
 async def upload_pdf(file: UploadFile = File(...)):
-    global upload_status
+    # Index முழுவதுமா delete பண்ணி recreate பண்ணு
     try:
-        index.delete(delete_all=True, namespace="")
-    except Exception:
-        pass
+        pc.delete_index(os.getenv("PINECONE_INDEX"))
+        import time
+        time.sleep(5)
+        from pinecone import ServerlessSpec
+        pc.create_index(
+            name=os.getenv("PINECONE_INDEX"),
+            dimension=3072,
+            metric="cosine",
+            spec=ServerlessSpec(cloud="aws", region="us-east-1")
+        )
+        global index
+        index = pc.Index(os.getenv("PINECONE_INDEX"))
+    except Exception as e:
+        print(f"Reset error: {e}")
 
     with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
         tmp.write(await file.read())
