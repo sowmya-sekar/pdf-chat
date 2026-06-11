@@ -27,19 +27,19 @@ class QueryRequest(BaseModel):
 
 
 @app.post("/upload")
-async def upload_pdf(file: UploadFile = File(...), background_tasks: BackgroundTasks = None):
+async def upload_pdf(file: UploadFile = File(...)):
     try:
-        # namespace="" explicitly கொடு
         index.delete(delete_all=True, namespace="")
     except Exception:
         pass
     
-    tmp_path = f"/tmp/{file.filename}"
-    with open(tmp_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    import tempfile
+    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+        tmp.write(await file.read())
+        tmp_path = tmp.name
     
-    background_tasks.add_task(ingest_pdf, tmp_path)
-    return {"message": f"{file.filename} upload started!"}
+    ingest_pdf(tmp_path)
+    return {"message": f"{file.filename} ingested!"}
 @app.post("/query")
 async def query(req: QueryRequest):
     q_emb = gemini_client.models.embed_content(
