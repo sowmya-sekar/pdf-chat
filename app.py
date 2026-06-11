@@ -13,13 +13,15 @@ if "pdf_uploaded" not in st.session_state:
     st.session_state.pdf_uploaded = False
 if "summary" not in st.session_state:
     st.session_state.summary = ""
+if "ready" not in st.session_state:
+    st.session_state.ready = False
 
 with st.sidebar:
     st.header("Upload PDF")
     uploaded_file = st.file_uploader("Choose a PDF", type="pdf")
     if uploaded_file:
         if st.button("Upload & Process"):
-            with st.spinner("Uploading... Wait 2-3 mins then ask questions"):
+            with st.spinner("Uploading..."):
                 try:
                     res = requests.post(
                         f"{API_URL}/upload",
@@ -27,8 +29,9 @@ with st.sidebar:
                         timeout=30
                     )
                     if res.status_code == 200:
-                        st.success("✅ PDF uploading! Wait 2-3 mins then ask questions.")
+                        st.success("✅ PDF uploading! Wait 2-3 mins then click Done.")
                         st.session_state.pdf_uploaded = True
+                        st.session_state.ready = False
                         st.session_state.messages = []
                         st.session_state.summary = ""
                     else:
@@ -36,7 +39,14 @@ with st.sidebar:
                 except Exception as e:
                     st.error(f"Error: {str(e)}")
 
-    if st.session_state.pdf_uploaded:
+    if st.session_state.pdf_uploaded and not st.session_state.ready:
+        st.divider()
+        st.info("⏳ Processing in background... Wait 2-3 mins")
+        if st.button("✅ Done! Start Chatting"):
+            st.session_state.ready = True
+            st.rerun()
+
+    if st.session_state.ready:
         st.divider()
         if st.button("📝 Get Notes & Key Points"):
             with st.spinner("Generating notes..."):
@@ -57,7 +67,7 @@ for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.write(msg["content"])
 
-if st.session_state.pdf_uploaded:
+if st.session_state.ready:
     if prompt := st.chat_input("Ask a question about your PDF..."):
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
