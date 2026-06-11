@@ -36,7 +36,7 @@ with st.sidebar:
                 except Exception as e:
                     st.error(f"Error: {str(e)}")
 
-    if st.session_state.pdf_uploaded:
+   if st.session_state.pdf_uploaded:
     if prompt := st.chat_input("Ask a question about your PDF..."):
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
@@ -59,8 +59,7 @@ with st.sidebar:
                 except Exception as e:
                     st.error(f"Error: {str(e)}")
 else:
-    st.chat_input("Upload a PDF first...", disabled=True)
-if st.session_state.summary:
+    st.chat_input("Upload a PDF first...", disabled=True)if st.session_state.summary:
     with st.expander("📝 Notes & Key Points", expanded=True):
         st.markdown(st.session_state.summary)
 
