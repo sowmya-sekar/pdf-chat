@@ -20,22 +20,33 @@ with st.sidebar:
     uploaded_file = st.file_uploader("Choose a PDF", type="pdf")
     if uploaded_file:
         if st.button("Upload & Process"):
-            with st.spinner("Uploading & Processing... Please wait..."):
-                try:
-                    res = requests.post(
-                        f"{API_URL}/upload",
-                        files={"file": (uploaded_file.name, uploaded_file, "application/pdf")},
-                        timeout=600
-                    )
-                    if res.status_code == 200:
-                        st.success("✅ Upload Successful! You can now ask questions.")
-                        st.session_state.pdf_uploaded = True
-                        st.session_state.messages = []
-                        st.session_state.summary = ""
-                    else:
-                        st.error(f"Failed: {res.status_code} — {res.text}")
-                except Exception as e:
-                    st.error(f"Error: {str(e)}")
+            try:
+                res = requests.post(
+                    f"{API_URL}/upload",
+                    files={"file": (uploaded_file.name, uploaded_file, "application/pdf")},
+                    timeout=30
+                )
+                if res.status_code == 200:
+                    st.session_state.pdf_uploaded = False
+                    st.session_state.messages = []
+                    st.session_state.summary = ""
+
+                    with st.spinner("Processing PDF... Please wait"):
+                        while True:
+                            status_res = requests.get(f"{API_URL}/status", timeout=10)
+                            status = status_res.json()
+                            if status["status"] == "done":
+                                st.success("✅ Upload Successful!")
+                                st.session_state.pdf_uploaded = True
+                                break
+                            elif status["status"] == "error":
+                                st.error(f"Error: {status['message']}")
+                                break
+                            time.sleep(3)
+                else:
+                    st.error(f"Failed: {res.text}")
+            except Exception as e:
+                st.error(f"Error: {str(e)}")
 
     if st.session_state.pdf_uploaded:
         st.divider()
